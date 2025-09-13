@@ -2,8 +2,9 @@ import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import connectDB from "./src/helper/db.js";
-import authRoute from "./src/routes/authRoutes.js";
+import connectDB from "./src/config/db.js";
+import authRoutes from "./src/routes/authRoutes.js";
+import listingRoutes from "./src/routes/listingRoutes.js";
 import Users from "./src/models/Users.js";
 
 dotenv.config();
@@ -22,7 +23,9 @@ app.use(
 );
 
 // Routes
-app.use("/api/auth", authRoute);
+app.use("/api/auth", authRoutes);
+app.use("/api/listing",listingRoutes)
+
 
 app.get("/delete/:id", async (req, res) => {
   try {

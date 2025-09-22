@@ -7,6 +7,6 @@ router.post("/signup",  signup);
 router.post("/verify", verifyEmail);
 router.post("/login", login);
 router.post("/logout", logout);
-router.post("/delete/:id",authMiddleware,deleteAccount)
+router.delete("/delete/:id",authMiddleware,deleteAccount)
 
 export default router;

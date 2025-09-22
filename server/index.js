@@ -5,7 +5,11 @@ import cors from "cors";
 import connectDB from "./src/config/db.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import listingRoutes from "./src/routes/listingRoutes.js";
-import Users from "./src/models/Users.js";
+import requestRoutes from "./src/routes/requestRoute.js";
+import chatRoutes from "./src/routes/chatRoutes.js";
+import leaderBoardRoutes from "./src/routes/leaderBoardRoute.js";
+
+
 
 dotenv.config();
 const app = express();
@@ -23,26 +27,13 @@ app.use(
 );
 
 // Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authRoutes)
 app.use("/api/listing",listingRoutes)
+app.use('/api/request',requestRoutes)
+app.use('/api/chat',chatRoutes)
+app.use('/api/leaderboard',leaderBoardRoutes)
 
 
-app.get("/delete/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const deletedUser = await  Users.findByIdAndDelete(id);
-
-    if (!deletedUser) {
-      return res.status(404).json({ message: "Record not found" });
-    }
-
-    res.json({ message: "Record deleted successfully", deletedUser });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error deleting record", error: error.message });
-  }
-});
 
 // DB Connection
 connectDB();

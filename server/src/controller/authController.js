@@ -1,31 +1,11 @@
 import User from "../models/Users.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import generateOtp from '../utils/generateOtp.js'
+import { sendVerificationMail } from "../helper/verificationMail.js";
 dotenv.config();
 
-// Send email helper
-const sendVerificationEmail = async (email, code) => {
-  try {
-    const transporter = nodemailer.createTransport({
-    service: "gmail", 
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  await transporter.sendMail({
-    from: `"MediLink" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: "Verify your Email",
-    text: `Your verification code is: ${code}`,
-  });
-  } catch (error) {
-    console.log("LOG FOR MAIL",error)
-  }
-};
 
 //  Signup
 export const signup = async (req, res) => {
@@ -33,14 +13,47 @@ export const signup = async (req, res) => {
     const { name, email, password, phone, city } = req.body;
 
     const existingUser = await User.findOne({ email });
+
     console.log("LOG FROM SIGNUP",existingUser)
-    if (existingUser) return res.status(400).json({ message: "User already exists" });
+
+    if (existingUser) {
+      if (!existingUser.isVerified) {
+        if (
+          existingUser.lastOtpSentAt &&
+          Date.now() - existingUser.lastOtpSentAt.getTime() < 60 * 1000
+        ) {
+          return res.status(429).json({
+            success: false,
+            message: "Please wait 1 minute before requesting another OTP.",
+          });
+        }
+
+        const { code, expires, lastOtpSentAt } = await generateOtp(email);
+
+        existingUser.verificationCodeExpires = expires;
+        existingUser.verificationCode = code;
+        existingUser.lastOtpSentAt = lastOtpSentAt;
+        await existingUser.save();
+
+        await sendVerificationMail(email,code)
+
+        return res.status(200).json({
+          success: true,
+          // redirect to verification mail page
+          message: "user already signed up,Verification mail send successfully",
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: "user already registered please login",
+      });
+    }
+
+      
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate OTP
-    const code = Math.floor(100000 + Math.random() * 900000);
-    const expires = Date.now() + 60 * 60 * 1000; // 60 min expiry
+   const { code, expires, lastOtpSentAt } = await generateOtp(email);
 
     const user = await User.create({
       name,
@@ -50,9 +63,10 @@ export const signup = async (req, res) => {
       city,
       verificationCode: code,
       verificationCodeExpires: expires,
+      lastOtpSentAt
     });
 
-    await sendVerificationEmail(email, code);
+    await sendVerificationMail(email,code)
 
     res.status(201).json({ message: "Signup successful, please verify your email" });
   } catch (error) {
@@ -65,23 +79,45 @@ export const signup = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const { email, code } = req.body;
+    
 
     const user = await User.findOne({ email });
+    
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (user.isVerified) return res.status(400).json({ message: "Already verified" });
 
-    if (user.verificationCode !== parseInt(code) || user.verificationCodeExpires < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired code" });
+    if ( user.verificationCodeExpires < Date.now())
+       {
+       const { code, expires, lastOtpSentAt } = await generateOtp(email);
+
+        user.verificationCodeExpires = expires;
+        user.verificationCode = code;
+        user.lastOtpSentAt = lastOtpSentAt;
+        await user.save();
+
+      await sendVerificationMail(email,code)
+      return res.status(400).json({ message: "expired code,new verifation has been send to your " });
+  
     }
+
+    if(user.verificationCode !== parseInt(code))
+    {
+      return res.status(400).json({ message: "Invalid code " });
+    }
+
+    
 
     user.isVerified = true;
     user.verificationCode = undefined;
     user.verificationCodeExpires = undefined;
+    user.lastOtpSentAt= undefined;
     await user.save();
 
     res.json({ message: "Email verified successfully" });
   } catch (error) {
+    console.log("error");
+    
     res.status(500).json({ message: error.message });
   }
 };
@@ -120,3 +156,22 @@ export const logout = (req, res) => {
   res.clearCookie("token");
   res.json({ message: "Logged out successfully" });
 };
+
+
+export const deleteAccount = async(req,res)=>{
+  try {
+    const { id } = req.params;
+
+    const deletedUser = await  User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+
+    res.json({ message: "Record deleted successfully", deletedUser });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error deleting record", error: error.message });
+  }
+};
+

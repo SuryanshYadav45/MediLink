@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   verificationCode: { type: Number }, 
   verificationCodeExpires: { type: Date }, 
+  lastOtpSentAt: Date,
 });
 
 export default mongoose.model("User", userSchema);

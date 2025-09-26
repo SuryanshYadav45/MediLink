@@ -54,24 +54,3 @@ export const incrementDonated = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-// PATCH /approves
-export const incrementHelped = async (req, res) => {
-  try {
-     const userId  = req.user.id;
-
-    const user = await Leaderboard.findOneAndUpdate(
-      { userId } ,
-      {
-        $inc: { helpedCount: 1, reputationScore: 5 },
-        $set: { lastUpdated: new Date() }
-      },
-      { new: true, upsert: true }
-    );
-
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-

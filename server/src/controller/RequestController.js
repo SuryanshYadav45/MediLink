@@ -148,16 +148,6 @@ export const approveRequest = async (req, res) => {
     getRequest.status = "approved";
     await getRequest.save();
 
-    // Update leaderboard for the owner (they helped someone)
-    try {
-      await axios.patch(
-        "http://localhost:5000/api/leaderboard/increment-helped",
-        {},
-        { headers: { Authorization: req.headers.authorization } }
-      );
-    } catch (err) {
-      console.error("Failed to update leaderboard:", err.message);
-    }
 
     const chat = await Chat.findOneAndUpdate(
       { listingId: getRequest.listingId },

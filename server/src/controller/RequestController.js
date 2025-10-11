@@ -3,10 +3,14 @@ import Listing from "../models/Listing.js";
 import Chat from "../models/Chat.js";
 import mongoose from "mongoose";
 import Leaderboard from "../models/Leaderboard.js";
+//Socket Integration
+let ioInstance = null;
+// Register socket instance from server
+export const registerSocket = (io) => {
+  ioInstance = io;
+};
 
-
-// ==================== Create a New Request ====================
-
+// Create a New Request
 export const createRequest = async (req, res) => {
   try {
     const listingId = req.params.listingId;
@@ -69,8 +73,7 @@ export const createRequest = async (req, res) => {
 };
 
 
-// ==================== Get My Requests (Owner or Requester) ====================
-
+// Get My Requests (Owner or Requester)
 export const getMyrequest = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -110,8 +113,7 @@ export const getMyrequest = async (req, res) => {
 };
 
 
-// ==================== Get Requests for a Specific Listing ====================
-
+// this is for admin -  Get Requests for a Specific Listing
 export const getRequestForListing = async (req, res) => {
   try {
     const { listingId } = req.params;
@@ -138,8 +140,7 @@ export const getRequestForListing = async (req, res) => {
 };
 
 
-// ==================== Approve a Request ====================
-
+//Approve a Request
 export const approveRequest = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -178,8 +179,7 @@ export const approveRequest = async (req, res) => {
 };
 
 
-// ==================== Cancel a Request ====================
-
+// Cancel a Request 
 export const cancelRequest = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -204,8 +204,7 @@ export const cancelRequest = async (req, res) => {
 };
 
 
-// ==================== Reject a Request ====================
-
+//Reject a Request
 export const rejectRequest = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -230,8 +229,7 @@ export const rejectRequest = async (req, res) => {
 };
 
 
-// ==================== Confirm Completion of Donation ====================
-
+//Confirm Completion of Donation 
 export const completeRequest = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -282,19 +280,7 @@ export const completeRequest = async (req, res) => {
   }
 };
 
-
-// ==================== Socket Integration ====================
-
-let ioInstance = null;
-
-// Register socket instance from server
-export const registerSocket = (io) => {
-  ioInstance = io;
-};
-
-
-// ==================== Mark Donation as Sent by Owner ====================
-
+//Mark Donation as Sent by Owner
 export const markAsDonated = async (req, res) => {
   try {
     const userId = req.user.id;

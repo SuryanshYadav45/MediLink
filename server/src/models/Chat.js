@@ -8,7 +8,7 @@ const messageSchema = new mongoose.Schema({
 
 const chatSchema = new mongoose.Schema({
   listingId: { type: mongoose.Schema.Types.ObjectId, ref: "Listing", required: true },
-  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // [ownerId, requesterId]
+  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], //[ownerId, requesterId]
   messages: [messageSchema]
 }, { timestamps: true });
 

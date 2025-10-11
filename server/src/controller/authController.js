@@ -6,6 +6,7 @@ import generateOtp from "../utils/generateOtp.js";
 import { sendVerificationMail } from "../helper/verificationMail.js";
 dotenv.config();
 
+// signup 
 export const signup = async (req, res) => {
   try {
     const { name, email, password, phone, city } = req.body;
@@ -68,14 +69,15 @@ export const signup = async (req, res) => {
   }
 };
 
+// verify 
 export const verifyEmail = async (req, res) => {
   try {
     const { email, code } = req.body;
     const user = await User.findOne({ email });
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
     if (user.isVerified)
-      return res.status(400).json({ message: "Already verified" });
+      return res.status(400).json({success: false, message: "Already verified" });
 
     if (user.verificationCodeExpires < Date.now()) {
       const { code, expires, lastOtpSentAt } = await generateOtp(email);
@@ -107,6 +109,7 @@ export const verifyEmail = async (req, res) => {
   }
 };
 
+// login 
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -136,7 +139,7 @@ export const login = async (req, res) => {
       path: "/",
     });
 
-    console.log("Cookie sent:", res.getHeaders()["set-cookie"]);
+    // console.log("Cookie sent:", res.getHeaders()["set-cookie"]);
 
     res.json({
       success: true,
@@ -148,11 +151,13 @@ export const login = async (req, res) => {
   }
 };
 
+// logout 
 export const logout = (req, res) => {
   res.clearCookie("token");
   res.json({ message: "Logged out successfully" });
 };
 
+// delete account 
 export const deleteAccount = async (req, res) => {
   try {
     const { id } = req.params;

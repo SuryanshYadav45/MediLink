@@ -13,8 +13,8 @@ const userSchema = new mongoose.Schema({
 
   // Email Verification fields
   isVerified: { type: Boolean, default: false },
-  verificationCode: { type: Number }, 
-  verificationCodeExpires: { type: Date }, 
+  verificationCode: { type: Number },
+  verificationCodeExpires: { type: Date },
   lastOtpSentAt: Date,
 });
 

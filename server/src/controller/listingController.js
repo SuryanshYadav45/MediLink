@@ -1,8 +1,7 @@
 import Listings from "../models/Listing.js";
-import axios from "axios";
 
-// ==================== Create a New Listing ====================
 
+// Create a New Listing
 export const createListing = async (req, res) => {
   try {
     // Ensure that the user making the request is authenticated
@@ -93,8 +92,7 @@ export const createListing = async (req, res) => {
   }
 };
 
-// ==================== Get All Listings ====================
-
+//Get All Listings
 export const getAllListings = async (req, res) => {
   try {
     const { type, city, status } = req.query;
@@ -133,8 +131,7 @@ export const getAllListings = async (req, res) => {
   }
 };
 
-// ==================== Get a Listing by ID ====================
-
+// Get a Listing by ID
 export const getListing = async (req, res) => {
   try {
     const listingId = req.params.id;
@@ -169,16 +166,15 @@ export const getListing = async (req, res) => {
   }
 };
 
-// ==================== Update Listing Status ====================
-
+//Update Listing Status
 export const updateListingStatus = async (req, res) => {
   try {
     const listingId = req.params.id;
     const { status } = req.body;
     const userId = req.user.id;
 
-    const allowedStatus = ["available", "reserved", "donated"];
-
+    const allowedStatus = ["available", "reserved"];
+    
     // Validate allowed status values
     if (!allowedStatus.includes(status)) {
       return res.status(404).json({
@@ -206,19 +202,6 @@ export const updateListingStatus = async (req, res) => {
     findListingAndUpdate.status = status;
     await findListingAndUpdate.save();
 
-    // If status is set to "donated", update leaderboard data
-    if (status === "donated") {
-      try {
-        await axios.patch(
-          "http://localhost:5000/api/leaderboard/increment-donated",
-          {},
-          { headers: { Authorization: req.headers.authorization } }
-        );
-      } catch (err) {
-        console.error("Failed to update leaderboard:", err.message);
-      }
-    }
-
     res.json({
       message: "Listing updated successfully",
       listing: findListingAndUpdate,
@@ -232,8 +215,7 @@ export const updateListingStatus = async (req, res) => {
   }
 };
 
-// ==================== Update a Listing ====================
-
+// Update a Listing 
 export const updateListing = async (req, res) => {
   try {
     const { title, description, expiryDate, location, photoURL } = req.body;
@@ -303,8 +285,7 @@ export const updateListing = async (req, res) => {
   }
 };
 
-// ==================== Delete a Listing ====================
-
+//Delete a Listing
 export const deleteListing = async (req, res) => {
   try {
     const listingId = req.params.id;
@@ -337,8 +318,7 @@ export const deleteListing = async (req, res) => {
   }
 };
 
-// ==================== Get All Listings Created by Logged-In User ====================
-
+//Get All Listings Created by Logged-In User 
 export const getMyListings = async (req, res) => {
   try {
     // Ensure user is authenticated

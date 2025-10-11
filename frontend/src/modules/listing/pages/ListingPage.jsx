@@ -34,7 +34,7 @@ export const PublicListingPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedListing, setSelectedListing] = useState(null);
 
-  // 🌍 For Nearest Filter
+  // For Nearest Filter
   const [userLocation, setUserLocation] = useState(null);
   const [sortByNearest, setSortByNearest] = useState(false);
 
@@ -56,7 +56,7 @@ export const PublicListingPage = () => {
     fetchListings();
   }, [dispatch]);
 
-  // 📏 Distance Calculator
+  //  Distance Calculator
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
     const R = 6371; // km
@@ -86,7 +86,7 @@ export const PublicListingPage = () => {
       return matchesSearch && matchesType && matchesCity && !isMyListing;
     });
 
-    // 🧭 Sort by Nearest if active
+    //  Sort by Nearest if active
     if (sortByNearest && userLocation) {
       filteredData = filteredData
         .map((item) => {
@@ -151,7 +151,7 @@ export const PublicListingPage = () => {
     toast.success("Request submitted successfully!");
   };
 
-  // 🧭 Get Nearest Items
+  //  Get Nearest Items
   const handleNearestClick = () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported");

@@ -3,10 +3,9 @@ import dotenv from "dotenv";
 dotenv.config();
 
 
-// ==================== Authentication Middleware ====================
+// Authentication Middleware
 // Verifies the JWT token from cookies or Authorization headers
 // Attaches the authenticated user details to the request object for later use
-
 export const authMiddleware = async (req, res, next) => {
   try {
     // Try to read token from cookies
@@ -38,17 +37,16 @@ export const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Attach limited and safe user data to the request object
+  
     req.user = {
       id: decoded.id,
       name: decoded.name || "Anonymous",
-      role: decoded.role || "user",
+      role: decoded.role ,
     };
 
     // Continue to the next middleware or controller
     next();
   } catch (error) {
-    // Handle unexpected errors
     return res.status(500).json({
       success: false,
       message: "Something went wrong in auth middleware",
@@ -58,9 +56,8 @@ export const authMiddleware = async (req, res, next) => {
 };
 
 
-// ==================== Admin Authorization Middleware ====================
+//Admin Authorization Middleware
 // Allows access only if the authenticated user has an admin role
-
 export const isAdminMiddleware = async (req, res, next) => {
   try {
     // Check the role attached by the auth middleware
@@ -83,7 +80,7 @@ export const isAdminMiddleware = async (req, res, next) => {
 };
 
 
-// ==================== User Authorization Middleware ====================
+// User Authorization Middleware
 // Allows access only if the authenticated user has a regular user role
 
 export const isUser = async (req, res, next) => {

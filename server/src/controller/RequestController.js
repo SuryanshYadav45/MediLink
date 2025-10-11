@@ -1,15 +1,18 @@
-// controller/RequestController.js
 import Request from "../models/Request.js";
 import Listing from "../models/Listing.js";
 import Chat from "../models/Chat.js";
-import axios from 'axios'
+import mongoose from "mongoose";
+import Leaderboard from "../models/Leaderboard.js";
 
+
+// ==================== Create a New Request ====================
 
 export const createRequest = async (req, res) => {
   try {
     const listingId = req.params.listingId;
     const requesterId = req.user.id;
 
+    // Ensure user is authenticated
     if (!requesterId) {
       return res
         .status(401)
@@ -18,21 +21,22 @@ export const createRequest = async (req, res) => {
 
     const { prescriptionDoc, message } = req.body;
 
-    // fetch whether listing exists
+    // Check if the listing exists
     const existingList = await Listing.findById(listingId);
     if (!existingList) {
       return res.status(404).json({ message: "Listing not found" });
     }
 
     const ownerId = existingList.ownerId;
-    // optional: ensure requester is not the owner
+
+    // Prevent the owner from creating a request on their own listing
     if (String(ownerId) === requesterId) {
       return res
         .status(400)
         .json({ error: "Owner cannot create a request on their own listing" });
     }
 
-    // if listing requires prescription ensure it's provided
+    // For medicine listings, ensure a prescription document is provided
     if (existingList.type === "medicine" && !prescriptionDoc) {
       return res
         .status(400)
@@ -46,10 +50,12 @@ export const createRequest = async (req, res) => {
       message: message || "",
     };
 
+    // Add prescription document if required
     if (existingList.type === "medicine") {
       requestObject.prescriptionDoc = prescriptionDoc;
     }
 
+    // Create a new request
     const request = await Request.create(requestObject);
 
     return res.status(201).json({
@@ -62,93 +68,95 @@ export const createRequest = async (req, res) => {
   }
 };
 
+
+// ==================== Get My Requests (Owner or Requester) ====================
+
 export const getMyrequest = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { role } = req.query;
 
-    const userId = req.user.id;
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing user ID" });
+    }
 
     let filter = {};
 
-    if (role === "requester") {
-      filter.requesterId = userId;
-    } else if (role === "owner") {
-      filter.ownerId = userId;
+    // Filter requests based on user role
+    if (role === "owner") {
+      filter = { ownerId: userId };
     } else {
-      filter.$or = [{ ownerId: userId }, { requesterId: userId }];
+      filter = { requesterId: userId };
     }
 
-    if (!userId) {
-      return res.status(400).json({ message: "Missing userId in query" });
-    }
-
-    // Find requests where userId is either owner or requester
-    const requests = await Request.find(filter);
-
-    if (!requests || requests.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No requests found for this user" });
-    }
+    // Fetch all requests for the user
+    const requests = await Request.find(filter)
+      .populate("listingId ownerId requesterId")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
+      success: true,
       message: "Requests fetched successfully",
       requests,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to fetch requests",
     });
   }
 };
 
-// GET /requests/listing/:listingId
+
+// ==================== Get Requests for a Specific Listing ====================
+
 export const getRequestForListing = async (req, res) => {
-  {
-    try {
-      const { listingId } = req.params;
+  try {
+    const { listingId } = req.params;
 
-      if (!listingId) {
-        return res.status(400).json({ message: "please provide listing id" });
-      }
-      // fetch request regard listing
-      const requests = await Request.find({ listingId });
-
-      if (!requests || requests.length == 0) {
-        return res.status(400).json({ message: "no request available" });
-      }
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: "request fetched succesfully",
-          requests,
-        });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+    if (!listingId) {
+      return res.status(400).json({ message: "please provide listing id" });
     }
+
+    // Fetch all requests related to the given listing
+    const requests = await Request.find({ listingId });
+
+    if (!requests || requests.length === 0) {
+      return res.status(400).json({ message: "no request available" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "request fetched successfully",
+      requests,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// PUT /requests/:id/approve
+
+// ==================== Approve a Request ====================
+
 export const approveRequest = async (req, res) => {
   try {
     const userId = req.user.id;
     const { requestId } = req.params;
 
     const getRequest = await Request.findById(requestId);
-    // console.log(getRequest);
 
+    // Ensure only the listing owner can approve
     if (String(getRequest.ownerId) !== String(userId)) {
       return res.status(400).json({ message: "not authorised" });
     }
 
-    // update status to approved
+    // Update the request status
     getRequest.status = "approved";
     await getRequest.save();
 
-
+    // Create or find an existing chat between owner and requester
     const chat = await Chat.findOneAndUpdate(
       { listingId: getRequest.listingId },
       {
@@ -160,6 +168,7 @@ export const approveRequest = async (req, res) => {
       },
       { upsert: true, new: true }
     );
+
     return res
       .status(200)
       .json({ message: "request approved", request: getRequest, chat });
@@ -168,22 +177,24 @@ export const approveRequest = async (req, res) => {
   }
 };
 
-// PUT /requests/:id/cancel
+
+// ==================== Cancel a Request ====================
+
 export const cancelRequest = async (req, res) => {
   try {
     const userId = req.user.id;
     const { requestId } = req.params;
 
     const getRequest = await Request.findById(requestId);
-    console.log(getRequest);
 
+    // Only requester can cancel the request
     if (String(getRequest.requesterId) !== String(userId)) {
       return res.status(400).json({ message: "not authorised" });
     }
 
-    // update status to approved
     getRequest.status = "cancelled";
     await getRequest.save();
+
     return res
       .status(200)
       .json({ message: "request cancelled", request: getRequest });
@@ -192,21 +203,24 @@ export const cancelRequest = async (req, res) => {
   }
 };
 
+
+// ==================== Reject a Request ====================
+
 export const rejectRequest = async (req, res) => {
   try {
     const userId = req.user.id;
     const { requestId } = req.params;
 
     const getRequest = await Request.findById(requestId);
-    console.log(getRequest);
 
+    // Only owner can reject
     if (String(getRequest.ownerId) !== String(userId)) {
       return res.status(400).json({ message: "not authorised" });
     }
 
-    // update status to approved
     getRequest.status = "rejected";
     await getRequest.save();
+
     return res
       .status(200)
       .json({ message: "request rejected", request: getRequest });
@@ -215,35 +229,140 @@ export const rejectRequest = async (req, res) => {
   }
 };
 
+
+// ==================== Confirm Completion of Donation ====================
+
 export const completeRequest = async (req, res) => {
   try {
     const userId = req.user.id;
     const { requestId } = req.params;
 
     const getRequest = await Request.findById(requestId);
-    console.log(getRequest);
-
-    if (String(getRequest.ownerId) !== String(userId)) {
-      return res.status(400).json({ message: "not authorised" });
+    if (!getRequest) {
+      return res.status(404).json({ message: "Request not found" });
     }
 
-    // update status to approved
+    // Only requester can confirm the donation
+    if (String(getRequest.requesterId) !== String(userId)) {
+      return res.status(403).json({ message: "Only recipient can confirm donation" });
+    }
+
+    // Check if request is in correct status
+    if (getRequest.status !== "awaiting_confirmation") {
+      return res.status(400).json({ message: "Donation not awaiting confirmation" });
+    }
+
+    // Mark request as completed
     getRequest.status = "completed";
     await getRequest.save();
-    // Update leaderboard for the owner (they donated)
-    try {
-      await axios.patch(
-        "http://localhost:5000/api/leaderboard/increment-donated",
-        {},
-        { headers: { Authorization: req.headers.authorization } }
-      );
-    } catch (err) {
-      console.error("Failed to update leaderboard:", err.message);
-    }
-    return res
-      .status(200)
-      .json({ message: "request completed", request: getRequest });
+
+    // Update listing status to donated
+    await Listing.findByIdAndUpdate(getRequest.listingId, {
+      status: "donated",
+    });
+
+    // Update leaderboard for donor
+    await Leaderboard.findOneAndUpdate(
+      { userId: new mongoose.Types.ObjectId(getRequest.ownerId) },
+      {
+        $inc: { donatedCount: 1, reputationScore: 5 },
+        $set: { lastUpdated: new Date() },
+      },
+      { new: true, upsert: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Donation confirmed successfully and listing marked as donated.",
+      request: getRequest,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("completeRequest error:", error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+
+// ==================== Socket Integration ====================
+
+let ioInstance = null;
+
+// Register socket instance from server
+export const registerSocket = (io) => {
+  ioInstance = io;
+};
+
+
+// ==================== Mark Donation as Sent by Owner ====================
+
+export const markAsDonated = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { requestId } = req.params;
+
+    const request = await Request.findById(requestId)
+      .populate("requesterId")
+      .populate("ownerId")
+      .populate("listingId");
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    // Only owner can mark as donated
+    if (String(request.ownerId._id) !== String(userId)) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to mark as donated" });
+    }
+
+    // Only approved requests can be marked as donated
+    if (request.status !== "approved") {
+      return res
+        .status(400)
+        .json({ message: "Only approved requests can be marked as donated" });
+    }
+
+    request.status = "awaiting_confirmation";
+    await request.save();
+
+    // Ensure chat exists for communication
+    let chat = await Chat.findOne({ listingId: request.listingId });
+    if (!chat) {
+      chat = await Chat.create({
+        listingId: request.listingId,
+        participants: [request.ownerId, request.requesterId],
+        messages: [],
+      });
+    }
+
+    // Add a system message about the donation
+    const messageText = `${request.ownerId.name} has marked the donation for "${request.listingId.title}" as sent.`;
+
+    const message = {
+      senderId: request.ownerId._id,
+      text: messageText,
+      messageType: "system",
+      timestamp: new Date(),
+    };
+
+    chat.messages.push(message);
+    await chat.save();
+
+    // Emit message through socket if available
+    if (ioInstance) {
+      ioInstance
+        .to(request.listingId._id.toString())
+        .emit("receiveMessage", message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Donation marked as sent and awaiting confirmation.",
+      request,
+    });
+  } catch (error) {
+    console.error("markAsDonated error:", error);
+    return res.status(500).json({ message: error.message, stack: error.stack });
   }
 };

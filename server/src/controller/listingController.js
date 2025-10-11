@@ -1,10 +1,11 @@
 import Listings from "../models/Listing.js";
-import axios from 'axios'
+import axios from "axios";
 
+// ==================== Create a New Listing ====================
 
 export const createListing = async (req, res) => {
   try {
-    // Basic existence checks
+    // Ensure that the user making the request is authenticated
     if (!req.user || !req.user.id) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
@@ -12,7 +13,7 @@ export const createListing = async (req, res) => {
     const { title, description, type, expiryDate, location, photoURL } =
       req.body;
 
-    // Validate presence of required fields
+    // Check if the required fields are present
     if (!title || !description || !type || !location || !location.city) {
       return res.status(400).json({
         success: false,
@@ -20,9 +21,10 @@ export const createListing = async (req, res) => {
       });
     }
 
-    // Optional: enforce allowed types
+    // Define allowed types for listing
     const allowedTypes = ["medicine", "equipment"];
 
+    // Validate the type of listing
     if (!allowedTypes.includes(type)) {
       return res.status(400).json({
         success: false,
@@ -30,12 +32,12 @@ export const createListing = async (req, res) => {
       });
     }
 
-    // Safe destructure of location
+    // Safely extract city and coordinates from location
     const city = location.city;
     const lat = location.lat ?? null;
     const lng = location.lng ?? null;
 
-    // Build listingData
+    // Build the listing object to be stored in the database
     const listingData = {
       ownerId: req.user.id,
       title: typeof title === "string" ? title.trim() : title,
@@ -46,7 +48,7 @@ export const createListing = async (req, res) => {
       location: { city, lat, lng },
     };
 
-    // If medicine, validate expiryDate and ensure it's a valid future date
+    // If the listing is a medicine type, verify expiry date
     if (type === "medicine") {
       if (!expiryDate) {
         return res.status(400).json({
@@ -54,23 +56,27 @@ export const createListing = async (req, res) => {
           message: "expiryDate is required for medicine listings",
         });
       }
+
       const parsed = new Date(expiryDate);
+
       if (Number.isNaN(parsed.getTime())) {
         return res
           .status(400)
           .json({ success: false, message: "Invalid expiryDate format" });
       }
-      // Optional: require expiry to be in future
+
+      // Ensure expiry date is in the future
       if (parsed <= new Date()) {
         return res.status(400).json({
           success: false,
           message: "expiryDate must be a future date",
         });
       }
+
       listingData.expiryDate = parsed;
     }
 
-    // Create
+    // Create the new listing in the database
     const createdListing = await Listings.create(listingData);
 
     return res.status(201).json({
@@ -87,7 +93,7 @@ export const createListing = async (req, res) => {
   }
 };
 
-// get all listing
+// ==================== Get All Listings ====================
 
 export const getAllListings = async (req, res) => {
   try {
@@ -98,9 +104,11 @@ export const getAllListings = async (req, res) => {
     if (type) query.type = type;
     if (status) query.status = status;
 
+    // For medicines, only show listings with a valid expiry date
     if (type === "medicine") {
       query.expiryDate = { $gt: new Date() };
     }
+
     const findItem = await Listings.find(query);
 
     if (findItem.length === 0) {
@@ -125,7 +133,8 @@ export const getAllListings = async (req, res) => {
   }
 };
 
-// get listing by id
+// ==================== Get a Listing by ID ====================
+
 export const getListing = async (req, res) => {
   try {
     const listingId = req.params.id;
@@ -160,7 +169,7 @@ export const getListing = async (req, res) => {
   }
 };
 
-// update listing status id
+// ==================== Update Listing Status ====================
 
 export const updateListingStatus = async (req, res) => {
   try {
@@ -170,6 +179,7 @@ export const updateListingStatus = async (req, res) => {
 
     const allowedStatus = ["available", "reserved", "donated"];
 
+    // Validate allowed status values
     if (!allowedStatus.includes(status)) {
       return res.status(404).json({
         success: false,
@@ -184,6 +194,7 @@ export const updateListingStatus = async (req, res) => {
       return res.status(400).json({ error: "Listing not found" });
     }
 
+    // Only the owner of the listing can update it
     if (findListingAndUpdate.ownerId.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
@@ -191,20 +202,23 @@ export const updateListingStatus = async (req, res) => {
       });
     }
 
+    // Update the listing status
     findListingAndUpdate.status = status;
     await findListingAndUpdate.save();
-    // Update leaderboard for the owner (they helped someone)
-    if(status === 'donated') {
+
+    // If status is set to "donated", update leaderboard data
+    if (status === "donated") {
       try {
-      await axios.patch(
-        "http://localhost:5000/api/leaderboard/increment-donated",
-        {},
-        { headers: { Authorization: req.headers.authorization } }
-      );
-    } catch (err) {
-      console.error("Failed to update leaderboard:", err.message);
+        await axios.patch(
+          "http://localhost:5000/api/leaderboard/increment-donated",
+          {},
+          { headers: { Authorization: req.headers.authorization } }
+        );
+      } catch (err) {
+        console.error("Failed to update leaderboard:", err.message);
+      }
     }
-    }
+
     res.json({
       message: "Listing updated successfully",
       listing: findListingAndUpdate,
@@ -218,15 +232,16 @@ export const updateListingStatus = async (req, res) => {
   }
 };
 
-// update listing
+// ==================== Update a Listing ====================
+
 export const updateListing = async (req, res) => {
   try {
     const { title, description, expiryDate, location, photoURL } = req.body;
-
     const listingId = req.params.id;
 
     const listing = await Listings.findById(listingId);
 
+    // Only owner can update their listing
     if (listing.ownerId.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
@@ -234,7 +249,7 @@ export const updateListing = async (req, res) => {
       });
     }
 
-    // allow partial updates: only update fields provided
+    // Partial update: update only fields that are provided
     let updated = false;
     if (title) {
       listing.title = title;
@@ -256,6 +271,8 @@ export const updateListing = async (req, res) => {
       };
       updated = true;
     }
+
+    // For medicine listings, validate new expiry date
     if (listing.type === "medicine" && expiryDate) {
       const d = new Date(expiryDate);
       if (isNaN(d))
@@ -265,6 +282,8 @@ export const updateListing = async (req, res) => {
       listing.expiryDate = d;
       updated = true;
     }
+
+    // Return if no changes were made
     if (!updated)
       return res
         .status(400)
@@ -284,23 +303,26 @@ export const updateListing = async (req, res) => {
   }
 };
 
-// delete listing
+// ==================== Delete a Listing ====================
 
 export const deleteListing = async (req, res) => {
   try {
     const listingId = req.params.id;
     const userId = req.user.id;
 
+    // Delete only if the listing belongs to the logged-in user
     const deleteListing = await Listings.findOneAndDelete({
       _id: listingId,
       ownerId: userId,
     });
+
     if (!deleteListing) {
       return res.status(400).json({
         success: false,
         message: "Listing not found or you are not authorized to delete it.",
       });
     }
+
     return res.status(200).json({
       success: true,
       message: "Listing deleted successfully",
@@ -310,6 +332,47 @@ export const deleteListing = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Something went wrong",
+      error: error.message,
+    });
+  }
+};
+
+// ==================== Get All Listings Created by Logged-In User ====================
+
+export const getMyListings = async (req, res) => {
+  try {
+    // Ensure user is authenticated
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in first.",
+      });
+    }
+
+    const userId = req.user.id;
+
+    // Find all listings belonging to the current user
+    const listings = await Listings.find({ ownerId: userId }).sort({
+      createdAt: -1,
+    });
+
+    if (!listings.length) {
+      return res.status(200).json({
+        success: true,
+        message: "No listings found for this user.",
+        listings: [],
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User listings fetched successfully",
+      listings,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching user listings.",
       error: error.message,
     });
   }

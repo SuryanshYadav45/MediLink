@@ -40,7 +40,7 @@ export function RequestsPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // ✅ Fetch all requests
+  // Fetch all requests
   useEffect(() => {
     const fetchRequests = async () => {
       setLoading(true);
@@ -60,7 +60,7 @@ export function RequestsPage() {
     fetchRequests();
   }, []);
 
-  // ✅ Approve / Reject
+  //  Approve / Reject
   const handleRequestAction = async (requestId, action) => {
     try {
       const res =
@@ -85,7 +85,7 @@ export function RequestsPage() {
     }
   };
 
-  // ✅ Cancel
+  //  Cancel
   const handleCancelRequest = async (requestId) => {
     const res = await requestApi.cancelRequest(requestId);
     if (res.success) {
@@ -96,7 +96,7 @@ export function RequestsPage() {
     }
   };
 
-  // ✅ Mark as Donated (Donor)
+  //  Mark as Donated (Donor)
   const handleMarkAsDonated = async (requestId) => {
     try {
       const res = await requestApi.markAsDonated(requestId);
@@ -117,7 +117,7 @@ export function RequestsPage() {
     }
   };
 
-  // ✅ Confirm Received (Recipient)
+  //  Confirm Received (Recipient)
   const handleConfirmDonation = async (requestId) => {
     try {
       const res = await requestApi.completeRequest(requestId);
@@ -136,7 +136,7 @@ export function RequestsPage() {
     }
   };
 
-  // ✅ Helpers
+  // Helpers
   const filterRequests = (requests) =>
     statusFilter === "all"
       ? requests
@@ -177,7 +177,7 @@ export function RequestsPage() {
     }
   };
 
-  // ✅ Request Card Component
+  //  Request Card Component
   const RequestCard = ({ request, isReceived = false }) => {
     const StatusIcon = getStatusIcon(request.status);
     return (
@@ -221,7 +221,7 @@ export function RequestsPage() {
                 </Badge>
               </div>
 
-              {/* 🟢 Buttons */}
+              {/* Buttons */}
               <div className="flex flex-wrap gap-2 mt-3">
                 {/* Donor side */}
                 {isReceived && request.status === "pending" && (

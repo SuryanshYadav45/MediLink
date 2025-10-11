@@ -25,10 +25,8 @@ const io = new Server(server, {
 // Register socket instance globally for use in other controllers
 registerSocket(io);
 
-// ==================== Socket Authentication Middleware ====================
+//Socket Authentication Middleware
 // This middleware runs before each socket connection is established.
-// It verifies the JWT token provided in cookies and attaches user information.
-
 io.use((socket, next) => {
   try {
     // Extract cookies from the socket handshake headers
@@ -38,7 +36,6 @@ io.use((socket, next) => {
     // If token is missing, reject the connection
     if (!token) return next(new Error("No authentication token found"));
 
-    // Verify the JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Attach user details to the socket object for later use
@@ -52,11 +49,9 @@ io.use((socket, next) => {
   }
 });
 
-// ==================== Socket Event Handlers ====================
+//Socket Event Handlers
 // Handles connection, joining chat rooms, sending messages, and disconnection events.
-
 io.on("connection", (socket) => {
-  // User successfully connected to the socket server
 
   // Join a chat room based on the listing ID
   socket.on("joinRoom", async ({ listingId }) => {
@@ -104,14 +99,13 @@ io.on("connection", (socket) => {
     io.to(listingId).emit("receiveMessage", message);
   });
 
-  // Handle disconnection events
+
   socket.on("disconnect", () => {
     // console.log("User disconnected:", socket.user.id);
   });
 });
 
-// ==================== Server Startup ====================
-// The socket server listens for incoming connections on the specified port.
+
 
 const SOCKET_PORT = process.env.SOCKET_PORT || 5001;
 

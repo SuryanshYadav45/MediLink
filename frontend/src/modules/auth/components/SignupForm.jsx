@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { setAuthLoading } from "../store/authSlice";
 import { authApi } from "../services/authApi";
 
@@ -11,7 +10,6 @@ const SignupForm = ({ onSignupSuccess }) => {
   const { register, handleSubmit, reset } = useForm();
   const [showPassword, setShowPassword] = useState(false);
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { authLoading } = useSelector((state) => state.auth);
 
   // Handle signup form submission

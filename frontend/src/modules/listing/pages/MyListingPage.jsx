@@ -212,7 +212,7 @@ export const MyListingsPage = () => {
                         <MoreVertical size={14} className="mr-2" /> Update Status
                       </summary>
                       <div className="flex flex-col bg-surface border-t border-border">
-                        {["available", "reserved", "donated"].map((status) => (
+                        {["available", "reserved"].map((status) => (
                           <button
                             key={status}
                             onClick={() => handleStatusUpdate(listing._id, status)}

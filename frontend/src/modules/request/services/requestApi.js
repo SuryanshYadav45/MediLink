@@ -25,7 +25,7 @@ export const requestApi = {
     }
   },
 
-  // Get all requests for a specific listing
+  // Get all requests for a specific listing it is for admin only
   getRequestForListing: async (listingId) => {
     try {
       const response = await apiConnector(
@@ -149,6 +149,8 @@ export const requestApi = {
       };
     }
   },
+
+  // donated 
   markAsDonated: async (requestId) => {
   try {
     const response = await apiConnector("PUT", `/request/${requestId}/mark-donated`);
@@ -163,5 +165,4 @@ export const requestApi = {
     };
   }
 },
-
 };

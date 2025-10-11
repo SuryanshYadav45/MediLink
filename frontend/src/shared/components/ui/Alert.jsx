@@ -9,9 +9,7 @@ function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-/**
- * Tailwind style variants for Alert component
- */
+
 const alertVariants = cva(
   "relative w-full rounded-lg border px-4 py-3 text-sm grid " +
     "has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] " +
